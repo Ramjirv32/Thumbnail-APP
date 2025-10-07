@@ -25,7 +25,7 @@ class OpenRouterService {
       Make it compelling, under 160 characters, and focus on what viewers will get from clicking. Use action words and create curiosity.`;
 
       const response = await this.client.post('/chat/completions', {
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'openai/gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -53,7 +53,7 @@ class OpenRouterService {
       Return only the keywords as a comma-separated list, no explanations.`;
 
       const response = await this.client.post('/chat/completions', {
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'openai/gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -89,7 +89,7 @@ class OpenRouterService {
       Format as JSON array with objects containing: title, description, keywords`;
 
       const response = await this.client.post('/chat/completions', {
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'openai/gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -130,7 +130,7 @@ class OpenRouterService {
       Make it more engaging, add curiosity gaps, use power words, and ensure it's under 60 characters. Return only the improved title.`;
 
       const response = await this.client.post('/chat/completions', {
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'openai/gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -167,7 +167,7 @@ class OpenRouterService {
       Provide specific actionable recommendations to improve performance.`;
 
       const response = await this.client.post('/chat/completions', {
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'openai/gpt-3.5-turbo',
         messages: [
           {
             role: 'system',

@@ -1,116 +1,373 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+  Clipboard,
+  Dimensions,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+import * as Haptics from 'expo-haptics';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+
+import { Colors, Typography, Spacing } from '../../constants/theme';
+import { useColorScheme } from '../../hooks/use-color-scheme';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { TextInput } from '../../components/ui/TextInput';
+import { Badge } from '../../components/ui/Badge';
+import ApiService from '../services/api';
+
+const { width } = Dimensions.get('window');
 
 export default function ContentGeneratorScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
   const [topic, setTopic] = useState('');
-  const [generatedContent, setGeneratedContent] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [contentType, setContentType] = useState('');
+  const [category, setCategory] = useState('general');
+  const [loading, setLoading] = useState({
+    description: false,
+    keywords: false,
+    ideas: false,
+    titleImprovement: false,
+  });
+  const [results, setResults] = useState({
+    description: '',
+    keywords: [],
+    contentIdeas: [],
+    improvedTitle: '',
+  });
+  const [trendingTopics, setTrendingTopics] = useState([]);
 
-  const generateContent = async (type) => {
-    if (!topic.trim()) return;
-    
-    setLoading(true);
-    setContentType(type);
+  useEffect(() => {
+    loadTrendingTopics();
+  }, []);
+
+  const loadTrendingTopics = async () => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/generate-content`, {
-        topic: topic,
-        type: type
-      });
-      setGeneratedContent(response.data.content);
+      const response = await ApiService.getTrendingKeywords('', 'us');
+      setTrendingTopics(response.keywords?.slice(0, 5) || []);
     } catch (error) {
-      console.error('Error generating content:', error);
-      setGeneratedContent('Error generating content. Please try again.');
+      console.error('Failed to load trending topics:', error);
     }
-    setLoading(false);
   };
 
+  const generateDescription = async () => {
+    if (!topic.trim()) {
+      Alert.alert('Missing Topic', 'Please enter a topic first');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, description: true }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const response = await ApiService.generateDescription(topic, [], category);
+      setResults(prev => ({ ...prev, description: response.description }));
+      Alert.alert('Success', 'AI description generated!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate description. Try again.');
+      console.error('Description generation error:', error);
+    }
+
+    setLoading(prev => ({ ...prev, description: false }));
+  };
+
+  const generateKeywords = async () => {
+    if (!topic.trim()) {
+      Alert.alert('Missing Topic', 'Please enter a topic first');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, keywords: true }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const response = await ApiService.generateKeywords(topic, category);
+      setResults(prev => ({ ...prev, keywords: response.keywords || [] }));
+      Alert.alert('Success', 'AI keywords generated!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate keywords. Try again.');
+      console.error('Keywords generation error:', error);
+    }
+
+    setLoading(prev => ({ ...prev, keywords: false }));
+  };
+
+  const generateContentIdeas = async () => {
+    if (!topic.trim()) {
+      Alert.alert('Missing Topic', 'Please enter a topic first');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, ideas: true }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const response = await ApiService.generateContentIdeas(category, trendingTopics.map(t => t.keyword));
+      setResults(prev => ({ ...prev, contentIdeas: response.ideas || [] }));
+      Alert.alert('Success', 'AI content ideas generated!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate content ideas. Try again.');
+      console.error('Content ideas generation error:', error);
+    }
+
+    setLoading(prev => ({ ...prev, ideas: false }));
+  };
+
+  const improveTitle = async () => {
+    if (!topic.trim()) {
+      Alert.alert('Missing Topic', 'Please enter a topic first');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, titleImprovement: true }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const response = await ApiService.improveTitle(topic, category);
+      setResults(prev => ({ ...prev, improvedTitle: response.improvedTitle }));
+      Alert.alert('Success', 'Title improved with AI!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to improve title. Try again.');
+      console.error('Title improvement error:', error);
+    }
+
+    setLoading(prev => ({ ...prev, titleImprovement: false }));
+  };
+
+  const copyToClipboard = async (text) => {
+    await Clipboard.setString(text);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert('Copied!', 'Text copied to clipboard');
+  };
+
+  const categories = [
+    'general', 'gaming', 'technology', 'education', 'entertainment', 
+    'lifestyle', 'business', 'sports', 'music', 'art'
+  ];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Content Generator</Text>
-        <Text style={styles.headerSubtitle}>Generate Scripts, Titles & Descriptions</Text>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient
+        colors={[colors.primary, colors.secondary]}
+        style={styles.header}
+      >
+        <Animated.View entering={FadeInUp.delay(100)}>
+          <Text style={[styles.headerTitle, { fontFamily: Typography.family.bold }]}>
+            🚀 AI Content Studio
+          </Text>
+          <Text style={[styles.headerSubtitle, { fontFamily: Typography.family.regular }]}>
+            Create viral content with AI intelligence
+          </Text>
+        </Animated.View>
+      </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Enter a Topic or Keyword</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="E.g., React Native Tutorial..."
-            placeholderTextColor="#999"
-            value={topic}
-            onChangeText={setTopic}
-          />
-        </View>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Topic Input */}
+        <Animated.View entering={FadeInDown.delay(200)}>
+          <Card style={styles.inputCard}>
+            <Text style={[styles.sectionTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+              💡 Topic or Idea
+            </Text>
+            <TextInput
+              placeholder="Enter your content topic..."
+              value={topic}
+              onChangeText={setTopic}
+              style={styles.topicInput}
+            />
+          </Card>
+        </Animated.View>
 
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => generateContent('script')}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={['#4A90E2', '#5BA3E8']}
-              style={styles.gradientButton}
-            >
-              <Ionicons name="document-text-outline" size={20} color="#fff" />
-              <Text style={styles.actionButtonText}>Generate Script</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        {/* Category Selection */}
+        <Animated.View entering={FadeInDown.delay(300)}>
+          <Card style={styles.inputCard}>
+            <Text style={[styles.sectionTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+              🎯 Category
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.categoryContainer}>
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.categoryChip,
+                      category === cat && { backgroundColor: colors.primary }
+                    ]}
+                    onPress={() => setCategory(cat)}
+                  >
+                    <Text style={[
+                      styles.categoryText,
+                      { 
+                        fontFamily: Typography.family.medium,
+                        color: category === cat ? '#FFFFFF' : colors.text 
+                      }
+                    ]}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </Card>
+        </Animated.View>
 
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => generateContent('title')}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={['#5BA3E8', '#6CB6EE']}
-              style={styles.gradientButton}
-            >
-              <Ionicons name="text-outline" size={20} color="#fff" />
-              <Text style={styles.actionButtonText}>Generate Title</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => generateContent('description')}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={['#6CB6EE', '#7DC9F4']}
-              style={styles.gradientButton}
-            >
-              <Ionicons name="list-outline" size={20} color="#fff" />
-              <Text style={styles.actionButtonText}>Generate Description</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4A90E2" />
-            <Text style={styles.loadingText}>Generating {contentType}...</Text>
-          </View>
+        {/* Trending Topics */}
+        {trendingTopics.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(350)}>
+            <Card style={styles.inputCard}>
+              <Text style={[styles.sectionTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+                🔥 Trending Now
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.trendingContainer}>
+                  {trendingTopics.map((trend, index) => (
+                    <Badge
+                      key={index}
+                      text={trend.keyword}
+                      variant="primary"
+                      onPress={() => setTopic(trend.keyword)}
+                      style={styles.trendingBadge}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            </Card>
+          </Animated.View>
         )}
 
-        {generatedContent && !loading && (
-          <View style={styles.resultContainer}>
-            <View style={styles.resultHeader}>
-              <Text style={styles.resultLabel}>Generated {contentType.charAt(0).toUpperCase() + contentType.slice(1)}:</Text>
-              <TouchableOpacity>
-                <Ionicons name="copy-outline" size={24} color="#4A90E2" />
-              </TouchableOpacity>
+        {/* AI Actions */}
+        <Animated.View entering={FadeInDown.delay(400)}>
+          <Card style={styles.actionsCard}>
+            <Text style={[styles.sectionTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+              🤖 AI Tools
+            </Text>
+            
+            <View style={styles.actionsGrid}>
+              <Button
+                title="📝 Description"
+                size="md"
+                onPress={generateDescription}
+                loading={loading.description}
+                style={styles.actionButton}
+              />
+              <Button
+                title="🔍 Keywords"
+                size="md"
+                onPress={generateKeywords}
+                loading={loading.keywords}
+                style={styles.actionButton}
+              />
+              <Button
+                title="💡 Ideas"
+                size="md"
+                onPress={generateContentIdeas}
+                loading={loading.ideas}
+                style={styles.actionButton}
+              />
+              <Button
+                title="✨ Improve Title"
+                size="md"
+                onPress={improveTitle}
+                loading={loading.titleImprovement}
+                style={styles.actionButton}
+              />
             </View>
-            <ScrollView style={styles.resultScroll}>
-              <Text style={styles.resultText}>{generatedContent}</Text>
-            </ScrollView>
-          </View>
+          </Card>
+        </Animated.View>
+
+        {/* Results */}
+        {results.description && (
+          <Animated.View entering={FadeInDown.delay(500)}>
+            <Card style={styles.resultCard}>
+              <View style={styles.resultHeader}>
+                <Text style={[styles.resultTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+                  📝 AI Description
+                </Text>
+                <TouchableOpacity onPress={() => copyToClipboard(results.description)}>
+                  <Ionicons name="copy-outline" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.resultText, { fontFamily: Typography.family.regular, color: colors.text }]}>
+                {results.description}
+              </Text>
+            </Card>
+          </Animated.View>
+        )}
+
+        {results.keywords.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(600)}>
+            <Card style={styles.resultCard}>
+              <Text style={[styles.resultTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+                🔍 AI Keywords
+              </Text>
+              <View style={styles.keywordsContainer}>
+                {results.keywords.map((keyword, index) => (
+                  <Badge
+                    key={index}
+                    text={keyword}
+                    variant="secondary"
+                    onPress={() => copyToClipboard(keyword)}
+                    style={styles.keywordBadge}
+                  />
+                ))}
+              </View>
+            </Card>
+          </Animated.View>
+        )}
+
+        {results.improvedTitle && (
+          <Animated.View entering={FadeInDown.delay(700)}>
+            <Card style={styles.resultCard}>
+              <View style={styles.resultHeader}>
+                <Text style={[styles.resultTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+                  ✨ Improved Title
+                </Text>
+                <TouchableOpacity onPress={() => copyToClipboard(results.improvedTitle)}>
+                  <Ionicons name="copy-outline" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.resultText, { fontFamily: Typography.family.medium, color: colors.text }]}>
+                {results.improvedTitle}
+              </Text>
+            </Card>
+          </Animated.View>
+        )}
+
+        {results.contentIdeas.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(800)}>
+            <Card style={styles.resultCard}>
+              <Text style={[styles.resultTitle, { fontFamily: Typography.family.semibold, color: colors.text }]}>
+                💡 Content Ideas
+              </Text>
+              {results.contentIdeas.map((idea, index) => (
+                <TouchableOpacity 
+                  key={index}
+                  style={styles.ideaItem}
+                  onPress={() => copyToClipboard(idea.title || idea)}
+                >
+                  <Text style={[styles.ideaTitle, { fontFamily: Typography.family.medium, color: colors.text }]}>
+                    {idea.title || idea}
+                  </Text>
+                  {idea.description && (
+                    <Text style={[styles.ideaDescription, { fontFamily: Typography.family.regular, color: colors.textSecondary }]}>
+                      {idea.description}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </Card>
+          </Animated.View>
         )}
       </ScrollView>
     </View>

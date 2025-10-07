@@ -119,7 +119,7 @@ export const Button = ({
     }
   };
 
-  // Determine font size based on size prop
+  // Determine font size and family based on size prop
   const getFontSize = () => {
     switch (size) {
       case 'sm': return Typography.size.sm;
@@ -129,9 +129,19 @@ export const Button = ({
     }
   };
 
+  const getFontFamily = () => {
+    switch (size) {
+      case 'sm': return Typography.family.medium;
+      case 'md': return Typography.family.semibold;
+      case 'lg': return Typography.family.semibold;
+      default: return Typography.family.semibold;
+    }
+  };
+
   const buttonColors = getButtonColors();
   const padding = getPadding();
   const fontSize = getFontSize();
+  const fontFamily = getFontFamily();
 
   // If gradient button
   if (gradient && variant === 'filled') {
@@ -178,7 +188,7 @@ export const Button = ({
               <Text 
                 style={[
                   styles.text, 
-                  { color: buttonColors.text, fontSize },
+                  { color: buttonColors.text, fontSize, fontFamily },
                   textStyle,
                 ]}
                 numberOfLines={1}
@@ -240,7 +250,7 @@ export const Button = ({
           <Text 
             style={[
               styles.text, 
-              { color: buttonColors.text, fontSize },
+              { color: buttonColors.text, fontSize, fontFamily },
               textStyle,
             ]}
             numberOfLines={1}

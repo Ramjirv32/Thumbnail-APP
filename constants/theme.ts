@@ -144,8 +144,19 @@ export const Fonts = Platform.select({
   },
 });
 
-// Typography system with consistent text styles
+// Typography system with consistent text styles using Poppins font
 export const Typography = {
+  // Font families
+  family: {
+    regular: 'Poppins-Regular',
+    medium: 'Poppins-Medium',
+    semibold: 'Poppins-SemiBold',
+    bold: 'Poppins-Bold',
+    light: 'Poppins-Light',
+    thin: 'Poppins-Thin',
+    black: 'Poppins-Black',
+  },
+  
   // Font sizes
   size: {
     xs: 12,
@@ -159,7 +170,7 @@ export const Typography = {
     '5xl': 48,
   },
   
-  // Font weights
+  // Font weights (keep for fallback)
   weight: {
     thin: '100',
     extralight: '200',
