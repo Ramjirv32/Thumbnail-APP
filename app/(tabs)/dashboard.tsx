@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   SafeAreaView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -18,37 +17,16 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SimpleBarChart, SimplePieChart } from '@/components/ui/Charts';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Card } from '@/components/ui/Card';
-import ApiService from '@/src/services/api';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      const response = await ApiService.getDashboardData();
-      setDashboardData(response.dashboard);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      Alert.alert('Info', 'Using demo data. Backend connection optional.');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await loadDashboardData();
-    setRefreshing(false);
+    setTimeout(() => setRefreshing(false), 1000);
   };
   
   // Mock data for charts
